@@ -1,0 +1,169 @@
+{
+    "config": {
+        "length": 10.0,
+        "width": 10.0,
+        "floor_height": 2.8,
+        "num_floors": 4,
+        "num_facade_floors": 3,
+        "floor_table": [
+            {
+                "Geschoss": "UG01",
+                "Wandflaeche": 150.0
+            },
+            {
+                "Geschoss": "EG00",
+                "Wandflaeche": 150.0
+            },
+            {
+                "Geschoss": "OG01",
+                "Wandflaeche": 150.0
+            },
+            {
+                "Geschoss": "OG02",
+                "Wandflaeche": 150.0
+            }
+        ]
+    },
+    "measures": {
+        "Fassade": [
+            {
+                "name": "Standard Putz",
+                "co2": 15.0
+            },
+            {
+                "name": "Test10",
+                "co2": 10.0
+            },
+            {
+                "name": "Test20",
+                "co2": 20.0
+            }
+        ],
+        "Dach": [
+            {
+                "name": "Standard Ziegel",
+                "co2": 25.0
+            }
+        ],
+        "W\u00e4nde": [
+            {
+                "name": "Standard Beton",
+                "co2": 45.0
+            }
+        ]
+    },
+    "variants": {
+        "Bestand Test": {
+            "Fassade": {
+                "Nord": [
+                    {
+                        "measure": "Test10",
+                        "percent": 50.0
+                    },
+                    {
+                        "measure": "Test20",
+                        "percent": 50.0
+                    }
+                ],
+                "Ost": [
+                    {
+                        "measure": "Test20",
+                        "percent": 100.0
+                    }
+                ],
+                "S\u00fcd": [
+                    {
+                        "measure": "Test10",
+                        "percent": 100.0
+                    }
+                ],
+                "West": [
+                    {
+                        "measure": "Test10",
+                        "percent": 100.0
+                    }
+                ]
+            },
+            "Dach": {
+                "Dach": [
+                    {
+                        "measure": "Standard Ziegel",
+                        "percent": 100.0
+                    }
+                ]
+            },
+            "W\u00e4nde": {
+                "UG01": [
+                    {
+                        "measure": "Standard Beton",
+                        "percent": 100.0
+                    }
+                ],
+                "EG00": [
+                    {
+                        "measure": "Standard Beton",
+                        "percent": 100.0
+                    }
+                ],
+                "OG01": [
+                    {
+                        "measure": "Standard Beton",
+                        "percent": 100.0
+                    }
+                ],
+                "OG02": [
+                    {
+                        "measure": "Standard Beton",
+                        "percent": 100.0
+                    }
+                ]
+            }
+        },
+        "Bestand Test2": {
+            "Fassade": {
+                "Nord": [
+                    {
+                        "measure": "Test10",
+                        "percent": 50.0
+                    },
+                    {
+                        "measure": "Test20",
+                        "percent": 50.0
+                    }
+                ],
+                "Ost": [
+                    {
+                        "measure": "Test20",
+                        "percent": 100.0
+                    }
+                ],
+                "S\u00fcd": [
+                    {
+                        "measure": "Test10",
+                        "percent": 100.0
+                    }
+                ],
+                "West": [
+                    {
+                        "measure": "Test10",
+                        "percent": 100.0
+                    }
+                ]
+            },
+            "Dach": {
+                "Dach": [
+                    {
+                        "measure": "Standard Ziegel",
+                        "percent": 100.0
+                    }
+                ]
+            },
+            "W\u00e4nde": {
+                "UG01": [],
+                "EG00": [],
+                "OG01": [],
+                "OG02": []
+            }
+        }
+    }
+}
