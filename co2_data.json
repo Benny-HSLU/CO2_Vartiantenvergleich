@@ -82,7 +82,11 @@
                         "measure": "Test10",
                         "percent": 100.0
                     }
-                ]
+                ],
+                "Energiebedarf": {
+                    "co2_per_a": 600.0,
+                    "jahre": 50
+                }
             },
             "Dach": {
                 "Dach": [

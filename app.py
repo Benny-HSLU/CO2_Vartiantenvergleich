@@ -19,7 +19,8 @@ DEFAULT_DATA = {
     "measures": {
         "Fassade": [{"name": "Standard Putz", "co2": 15.0}],
         "Dach": [{"name": "Standard Ziegel", "co2": 25.0}],
-        "Wände": [{"name": "Standard Beton", "co2": 45.0}]
+        "Wände": [{"name": "Standard Beton", "co2": 45.0}],
+        "Tragstruktur": [{"name": "Standard Beton", "co2": 50.0}]
     },
     "variants": {}
 }
@@ -29,7 +30,11 @@ DEFAULT_DATA = {
 def load_data():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+            # Abwärtskompatibilität für alte Speicherstände (Measures)
+            if "Tragstruktur" not in data["measures"]:
+                data["measures"]["Tragstruktur"] = [{"name": "Standard Beton", "co2": 50.0}]
+            return data
     return DEFAULT_DATA.copy()
 
 
@@ -45,9 +50,13 @@ if "app_data" not in st.session_state:
 if "current_selections" not in st.session_state:
     # Standardauswahl-Struktur initialisieren
     st.session_state.current_selections = {
-        "Fassade": {"Nord": [], "Ost": [], "Süd": [], "West": []},
+        "Fassade": {
+            "Nord": [], "Ost": [], "Süd": [], "West": [],
+            "Energiebedarf": {"co2_per_a": 0.0, "jahre": 50}
+        },
         "Dach": {"Dach": []},
-        "Wände": {}
+        "Wände": {},
+        "Tragstruktur": {"Stützen": [], "Wände": [], "Decken": []}
     }
 
 if "active_variant" not in st.session_state:
@@ -103,7 +112,8 @@ areas = {
     "Dach": {
         "Dach": cfg["length"] * cfg["width"]
     },
-    "Wände": {row["Geschoss"]: row["Wandflaeche"] for row in cfg["floor_table"]}
+    "Wände": {row["Geschoss"]: row["Wandflaeche"] for row in cfg["floor_table"]},
+    "Tragstruktur": {"Stützen": 0, "Wände": 0, "Decken": 0}  # Dummy-Werte, da eigene Logik greift
 }
 
 st.divider()
@@ -124,6 +134,13 @@ with col_left:
             st.session_state.active_variant = selected_variant
             st.session_state.current_selections = json.loads(
                 json.dumps(st.session_state.app_data["variants"][selected_variant]))
+
+            # Abwärtskompatibilität: Falls alte Varianten fehlende Bereiche haben
+            if "Energiebedarf" not in st.session_state.current_selections["Fassade"]:
+                st.session_state.current_selections["Fassade"]["Energiebedarf"] = {"co2_per_a": 0.0, "jahre": 50}
+            if "Tragstruktur" not in st.session_state.current_selections:
+                st.session_state.current_selections["Tragstruktur"] = {"Stützen": [], "Wände": [], "Decken": []}
+
             update_walls_structure()
             st.rerun()
 
@@ -199,56 +216,141 @@ def render_category(cat_name, elements_dict):
         else:
             st.info("Keine Massnahmen vorhanden.")
 
-    # Aktualisierte Liste nach eventuellem Löschen laden
+    # Aktualisierte Liste laden
     measure_names = [m["name"] for m in st.session_state.app_data["measures"][cat_name]]
 
-    # Elemente rendern (z.B. Nord, Ost, etc.)
+    # Elemente rendern
     calc_data = []
 
     for element, area in elements_dict.items():
-        st.write(f"**{element}** ({area} m²)")
+        if cat_name == "Tragstruktur":
+            st.write(f"**{element}**")
+        else:
+            st.write(f"**{element}** ({area} m²)")
 
         # Zeilen rendern
         rows = st.session_state.current_selections[cat_name][element]
 
         for i, row_data in enumerate(rows):
-            c1, c2, c3 = st.columns([4, 2, 1])
-            with c1:
-                # Dropdown der Maßnahmen. Falls Maßnahme gelöscht wurde, auf Index 0 zurückfallen.
-                selected_idx = measure_names.index(row_data["measure"]) if row_data["measure"] in measure_names else 0
-                if len(measure_names) > 0:
-                    chosen = st.selectbox("Massnahme", measure_names, index=selected_idx,
-                                          key=f"sel_{cat_name}_{element}_{i}", label_visibility="collapsed")
-                    row_data["measure"] = chosen
-            with c2:
-                # Prozentwert
-                perc = st.number_input("%", value=float(row_data["percent"]), min_value=0.0, max_value=100.0, step=5.0,
-                                       key=f"perc_{cat_name}_{element}_{i}", label_visibility="collapsed")
-                row_data["percent"] = perc
-            with c3:
-                # Zeile löschen
-                if st.button("❌", key=f"del_{cat_name}_{element}_{i}"):
-                    st.session_state.current_selections[cat_name][element].pop(i)
-                    st.rerun()
+            # Unterschiedliche Eingabefelder je nach Kategorie
+            if cat_name == "Tragstruktur":
+                if element in ["Stützen", "Wände"]:
+                    c1, c2, c3 = st.columns([4, 2, 1])
+                    with c1:
+                        selected_idx = measure_names.index(row_data["measure"]) if row_data[
+                                                                                       "measure"] in measure_names else 0
+                        if len(measure_names) > 0:
+                            row_data["measure"] = st.selectbox("Massnahme", measure_names, index=selected_idx,
+                                                               key=f"sel_{cat_name}_{element}_{i}",
+                                                               label_visibility="collapsed")
+                    with c2:
+                        row_data["anzahl"] = st.number_input("Anzahl", value=float(row_data.get("anzahl", 1.0)),
+                                                             min_value=0.0, step=1.0,
+                                                             key=f"anz_{cat_name}_{element}_{i}",
+                                                             label_visibility="collapsed")
+                    with c3:
+                        if st.button("❌", key=f"del_{cat_name}_{element}_{i}"):
+                            st.session_state.current_selections[cat_name][element].pop(i)
+                            st.rerun()
+                elif element == "Decken":
+                    c1, c2, c3, c4 = st.columns([3, 2, 1.5, 1])
+                    with c1:
+                        selected_idx = measure_names.index(row_data["measure"]) if row_data[
+                                                                                       "measure"] in measure_names else 0
+                        if len(measure_names) > 0:
+                            row_data["measure"] = st.selectbox("Massnahme", measure_names, index=selected_idx,
+                                                               key=f"sel_{cat_name}_{element}_{i}",
+                                                               label_visibility="collapsed")
+                    with c2:
+                        row_data["flaeche"] = st.number_input("Fläche (m²)",
+                                                              value=float(row_data.get("flaeche", 100.0)),
+                                                              min_value=0.0, step=10.0,
+                                                              key=f"fl_{cat_name}_{element}_{i}")
+                    with c3:
+                        row_data["anzahl"] = st.number_input("Anzahl", value=float(row_data.get("anzahl", 1.0)),
+                                                             min_value=0.0, step=1.0,
+                                                             key=f"anz_{cat_name}_{element}_{i}")
+                    with c4:
+                        # Ein bisschen vertikales Padding für den Löschen Button in der Decken-Ansicht
+                        st.write("")
+                        if st.button("❌", key=f"del_{cat_name}_{element}_{i}"):
+                            st.session_state.current_selections[cat_name][element].pop(i)
+                            st.rerun()
+            else:
+                # Normalfall: Fassade, Dach, Wände (Prozentwerte)
+                c1, c2, c3 = st.columns([4, 2, 1])
+                with c1:
+                    selected_idx = measure_names.index(row_data["measure"]) if row_data[
+                                                                                   "measure"] in measure_names else 0
+                    if len(measure_names) > 0:
+                        row_data["measure"] = st.selectbox("Massnahme", measure_names, index=selected_idx,
+                                                           key=f"sel_{cat_name}_{element}_{i}",
+                                                           label_visibility="collapsed")
+                with c2:
+                    row_data["percent"] = st.number_input("%", value=float(row_data.get("percent", 100.0)),
+                                                          min_value=0.0, max_value=100.0, step=5.0,
+                                                          key=f"perc_{cat_name}_{element}_{i}",
+                                                          label_visibility="collapsed")
+                with c3:
+                    if st.button("❌", key=f"del_{cat_name}_{element}_{i}"):
+                        st.session_state.current_selections[cat_name][element].pop(i)
+                        st.rerun()
 
             # Berechnung für Chart sammeln
             co2_val = next(
                 (m["co2"] for m in st.session_state.app_data["measures"][cat_name] if m["name"] == row_data["measure"]),
                 0)
-            total_co2 = area * co2_val * (row_data["percent"] / 100.0)
+
+            if cat_name == "Tragstruktur":
+                if element in ["Stützen", "Wände"]:
+                    total_co2 = co2_val * cfg["floor_height"] * row_data.get("anzahl", 0)
+                elif element == "Decken":
+                    total_co2 = co2_val * row_data.get("flaeche", 0) * row_data.get("anzahl", 0)
+            else:
+                total_co2 = area * co2_val * (row_data.get("percent", 0) / 100.0)
+
             if total_co2 > 0:
                 calc_data.append({"Element": element, "Massnahme": row_data["measure"], "CO2 (kg)": total_co2})
 
         # Button für neue Zeile
         if st.button(f"➕ Zeile hinzufügen ({element})", key=f"add_{cat_name}_{element}"):
             if len(measure_names) > 0:
-                st.session_state.current_selections[cat_name][element].append(
-                    {"measure": measure_names[0], "percent": 100.0})
+                if cat_name == "Tragstruktur":
+                    if element in ["Stützen", "Wände"]:
+                        st.session_state.current_selections[cat_name][element].append(
+                            {"measure": measure_names[0], "anzahl": 1.0})
+                    else:
+                        st.session_state.current_selections[cat_name][element].append(
+                            {"measure": measure_names[0], "flaeche": 100.0, "anzahl": 1.0})
+                else:
+                    st.session_state.current_selections[cat_name][element].append(
+                        {"measure": measure_names[0], "percent": 100.0})
                 st.rerun()
             else:
                 st.error("Bitte zuerst eine Massnahme über das Zahnrad erstellen.")
 
-    # Pie-Chart für diese Kategorie (z.B. Fassade)
+    # Extra Eingabe für Energiebedarf (nur Fassade)
+    energie_co2_total = 0
+    if cat_name == "Fassade":
+        st.divider()
+        st.write("#### Energiebedarf")
+
+        if "Energiebedarf" not in st.session_state.current_selections["Fassade"]:
+            st.session_state.current_selections["Fassade"]["Energiebedarf"] = {"co2_per_a": 0.0, "jahre": 50}
+
+        edata = st.session_state.current_selections["Fassade"]["Energiebedarf"]
+
+        col_e1, col_e2 = st.columns(2)
+        with col_e1:
+            edata["co2_per_a"] = st.number_input("kgCO2/a", value=float(edata.get("co2_per_a", 0.0)), step=10.0,
+                                                 key="energie_co2")
+        with col_e2:
+            edata["jahre"] = st.number_input("Anzahl Jahre", value=int(edata.get("jahre", 50)), step=1,
+                                             key="energie_jahre")
+
+        energie_co2_total = edata["co2_per_a"] * edata["jahre"]
+
+    # Pie-Chart
     if calc_data:
         df_pie = pd.DataFrame(calc_data)
         pie_chart = alt.Chart(df_pie).mark_arc().encode(
@@ -258,10 +360,14 @@ def render_category(cat_name, elements_dict):
         ).properties(width=300, height=300, title=f"CO2 Anteil - {cat_name}")
         st.altair_chart(pie_chart, use_container_width=True)
 
+    # Anzeige des Energiebedarfs
+    if cat_name == "Fassade":
+        st.metric(label="Gesamter Energiebedarf", value=f"{energie_co2_total:,.2f} kgCO2")
+
 
 with col_right:
-    # Tabs für bessere Übersicht der Kategorien
-    tab1, tab2, tab3 = st.tabs(["Fassade", "Dach", "Wände"])
+    # Tabs erweitert um Tragstruktur
+    tab1, tab2, tab3, tab4 = st.tabs(["Fassade", "Dach", "Wände", "Tragstruktur"])
 
     with tab1:
         render_category("Fassade", areas["Fassade"])
@@ -269,6 +375,8 @@ with col_right:
         render_category("Dach", areas["Dach"])
     with tab3:
         render_category("Wände", areas["Wände"])
+    with tab4:
+        render_category("Tragstruktur", areas["Tragstruktur"])
 
 # --- BOTTOM SPALTE: Balkendiagramm Variantenvergleich ---
 st.divider()
@@ -284,21 +392,39 @@ if variants_to_compare:
 
         for cat_name, elements in var_data.items():
             for element_name, rows in elements.items():
-                area = areas.get(cat_name, {}).get(element_name, 0)
-                measures_list = st.session_state.app_data["measures"].get(cat_name, [])
 
-                for row in rows:
-                    co2_val = next((m["co2"] for m in measures_list if m["name"] == row["measure"]), 0)
-                    total_co2 = area * co2_val * (row["percent"] / 100.0)
-
+                # Spezielle Behandlung für Energiebedarf
+                if cat_name == "Fassade" and element_name == "Energiebedarf":
+                    total_co2 = rows.get("co2_per_a", 0.0) * rows.get("jahre", 0)
                     if total_co2 > 0:
-                        # Label z.B. "Nordfassade" oder "Wände OG1"
-                        element_label = f"{element_name} ({cat_name})" if cat_name != element_name else cat_name
                         comparison_data.append({
                             "Variante": var_name,
-                            "Element": element_label,
+                            "Element": "Energiebedarf (Fassade)",
                             "CO2 (kg)": total_co2
                         })
+                else:
+                    # Andere Elemente iterieren
+                    area = areas.get(cat_name, {}).get(element_name, 0)
+                    measures_list = st.session_state.app_data["measures"].get(cat_name, [])
+
+                    for row in rows:
+                        co2_val = next((m["co2"] for m in measures_list if m["name"] == row["measure"]), 0)
+
+                        if cat_name == "Tragstruktur":
+                            if element_name in ["Stützen", "Wände"]:
+                                total_co2 = co2_val * cfg["floor_height"] * row.get("anzahl", 0)
+                            elif element_name == "Decken":
+                                total_co2 = co2_val * row.get("flaeche", 0) * row.get("anzahl", 0)
+                        else:
+                            total_co2 = area * co2_val * (row.get("percent", 0.0) / 100.0)
+
+                        if total_co2 > 0:
+                            element_label = f"{element_name} ({cat_name})" if cat_name != element_name else cat_name
+                            comparison_data.append({
+                                "Variante": var_name,
+                                "Element": element_label,
+                                "CO2 (kg)": total_co2
+                            })
 
     if comparison_data:
         df_comp = pd.DataFrame(comparison_data)
