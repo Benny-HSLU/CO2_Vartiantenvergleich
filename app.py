@@ -192,16 +192,54 @@ def render_category(cat_name, elements_dict):
     measures_list = st.session_state.app_data["measures"][cat_name]
     measure_names = [m["name"] for m in measures_list]
 
-    # Massnahmen verwalten (hinzufügen & löschen) über Popover
+    # Massnahmen verwalten (hinzufügen, bearbeiten & löschen) über Popover
     with st.popover(f"⚙️ Massnahmen verwalten ({cat_name})"):
         st.write("**Neue Massnahme hinzufügen**")
         new_m_name = st.text_input("Name der Massnahme", key=f"nm_{cat_name}")
         new_m_co2 = st.number_input("kgCO2/m2", value=10.0, step=1.0, key=f"nc_{cat_name}")
-        if st.button("Hinzufügen", key=f"b_{cat_name}"):
+        if st.button("Hinzufügen", key=f"add_btn_{cat_name}"):
             if new_m_name:
                 st.session_state.app_data["measures"][cat_name].append({"name": new_m_name, "co2": new_m_co2})
                 save_data(st.session_state.app_data)
                 st.rerun()
+
+        st.divider()
+        st.write("**Massnahme bearbeiten**")
+        if measure_names:
+            m_to_edit_name = st.selectbox("Massnahme auswählen", measure_names, key=f"edit_sel_{cat_name}")
+            m_to_edit_obj = next(
+                (m for m in st.session_state.app_data["measures"][cat_name] if m["name"] == m_to_edit_name), None)
+
+            if m_to_edit_obj:
+                new_edit_name = st.text_input("Neuer Name", value=m_to_edit_obj["name"], key=f"edit_nm_{cat_name}")
+                new_edit_co2 = st.number_input("Neuer kgCO2/m2 Wert", value=float(m_to_edit_obj["co2"]), step=1.0,
+                                               key=f"edit_nc_{cat_name}")
+
+                if st.button("Änderungen speichern", key=f"edit_btn_{cat_name}"):
+                    # Wenn der Name geändert wurde, aktualisiere ihn überall, um Brüche zu vermeiden
+                    if new_edit_name != m_to_edit_name:
+                        # In aktuellen Selektionen aktualisieren
+                        for elem, rows in st.session_state.current_selections.get(cat_name, {}).items():
+                            if isinstance(rows, list):
+                                for r in rows:
+                                    if r.get("measure") == m_to_edit_name:
+                                        r["measure"] = new_edit_name
+                        # In gespeicherten Varianten aktualisieren
+                        for v_name, v_data in st.session_state.app_data["variants"].items():
+                            for elem, rows in v_data.get(cat_name, {}).items():
+                                if isinstance(rows, list):
+                                    for r in rows:
+                                        if r.get("measure") == m_to_edit_name:
+                                            r["measure"] = new_edit_name
+
+                    # Wert und Name in den Stammdaten aktualisieren
+                    m_to_edit_obj["name"] = new_edit_name
+                    m_to_edit_obj["co2"] = new_edit_co2
+                    save_data(st.session_state.app_data)
+                    st.success("Aktualisiert!")
+                    st.rerun()
+        else:
+            st.info("Keine Massnahmen zum Bearbeiten vorhanden.")
 
         st.divider()
         st.write("**Massnahme löschen**")
@@ -213,8 +251,6 @@ def render_category(cat_name, elements_dict):
                 ]
                 save_data(st.session_state.app_data)
                 st.rerun()
-        else:
-            st.info("Keine Massnahmen vorhanden.")
 
     # Aktualisierte Liste laden
     measure_names = [m["name"] for m in st.session_state.app_data["measures"][cat_name]]
@@ -438,6 +474,17 @@ if variants_to_compare:
         ).properties(height=300)
 
         st.altair_chart(bar_chart, use_container_width=True)
+
+        # CSV Export der Chart-Daten
+        st.write("")
+        csv = df_comp.to_csv(index=False, sep=";").encode('utf-8')
+        st.download_button(
+            label="📥 Daten als CSV exportieren",
+            data=csv,
+            file_name="co2_variantenvergleich.csv",
+            mime="text/csv",
+        )
+
     else:
         st.info("Die ausgewählten Varianten enthalten keine validen CO2-Werte.")
 else:

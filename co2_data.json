@@ -1,26 +1,26 @@
 {
     "config": {
-        "length": 10.0,
-        "width": 10.0,
-        "floor_height": 2.8,
+        "length": 54.32,
+        "width": 36.1,
+        "floor_height": 4.24,
         "num_floors": 4,
         "num_facade_floors": 3,
         "floor_table": [
             {
                 "Geschoss": "UG01",
-                "Wandflaeche": 150.0
+                "Wandflaeche": 96.0
             },
             {
                 "Geschoss": "EG00",
-                "Wandflaeche": 150.0
+                "Wandflaeche": 53.0
             },
             {
                 "Geschoss": "OG01",
-                "Wandflaeche": 150.0
+                "Wandflaeche": 96.0
             },
             {
                 "Geschoss": "OG02",
-                "Wandflaeche": 150.0
+                "Wandflaeche": 96.0
             }
         ]
     },
@@ -49,6 +49,12 @@
             {
                 "name": "Standard Beton",
                 "co2": 45.0
+            }
+        ],
+        "Tragstruktur": [
+            {
+                "name": "Standard Beton",
+                "co2": 50.0
             }
         ]
     },
