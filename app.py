@@ -31,7 +31,6 @@ def load_data():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
-            # Abwärtskompatibilität für alte Speicherstände
             if "Tragstruktur" not in data["measures"]:
                 data["measures"]["Tragstruktur"] = [{"name": "Standard Beton", "co2": 50.0}]
             return data
@@ -47,7 +46,6 @@ def save_data(data):
 if "app_data" not in st.session_state:
     st.session_state.app_data = load_data()
 
-# Dieser Counter zwingt Streamlit, die Widgets beim Laden einer Variante neu zu zeichnen
 if "load_counter" not in st.session_state:
     st.session_state.load_counter = 0
 
@@ -66,7 +64,6 @@ if "active_variant" not in st.session_state:
     st.session_state.active_variant = None
 
 
-# Hilfsfunktion, um die Wände-Struktur basierend auf der Konfiguration zu aktualisieren
 def update_walls_structure():
     floors = [row["Geschoss"] for row in st.session_state.app_data["config"]["floor_table"]]
     current_walls = st.session_state.current_selections.get("Wände", {})
@@ -79,12 +76,10 @@ update_walls_structure()
 # --- Layout der App ---
 st.set_page_config(page_title="CO2 Variantenvergleich", layout="wide")
 
-# Header
 col_header, col_gear = st.columns([5, 1])
 with col_header:
     st.title("CO2 Variantenvergleich")
 with col_gear:
-    # Gebäude-Konfiguration über Popover
     with st.popover("⚙️ Gebäude-Konfiguration"):
         st.subheader("Gebäudedaten")
         c = st.session_state.app_data["config"]
@@ -103,7 +98,6 @@ with col_gear:
             st.success("Gespeichert!")
             st.rerun()
 
-# Flächenberechnungen
 cfg = st.session_state.app_data["config"]
 areas = {
     "Fassade": {
@@ -121,7 +115,6 @@ areas = {
 
 st.divider()
 
-# Haupt-Layout
 col_left, col_right = st.columns([1, 2.5])
 
 # --- LINKE SPALTE: Varianten ---
@@ -129,7 +122,6 @@ with col_left:
     st.header("Varianten")
     variants = list(st.session_state.app_data["variants"].keys())
 
-    # Variante laden
     selected_variant = st.selectbox("Gespeicherte Varianten", ["(Neue Variante)"] + variants)
     if selected_variant != "(Neue Variante)" and st.session_state.active_variant != selected_variant:
         if st.button("Variante laden"):
@@ -137,7 +129,6 @@ with col_left:
             st.session_state.current_selections = json.loads(
                 json.dumps(st.session_state.app_data["variants"][selected_variant]))
 
-            # Abwärtskompatibilität checken und ggf. fehlende Felder ergänzen
             if "Energiebedarf" not in st.session_state.current_selections["Fassade"]:
                 st.session_state.current_selections["Fassade"]["Energiebedarf"] = {"co2_per_a": 0.0, "jahre": 50,
                                                                                    "pv_ausgleich": 0.0}
@@ -147,7 +138,6 @@ with col_left:
                 st.session_state.current_selections["Tragstruktur"] = {"Stützen": [], "Wände": [], "Decken": []}
 
             update_walls_structure()
-            # Zähler erhöhen, um Cache der Input-Felder zu brechen!
             st.session_state.load_counter += 1
             st.rerun()
 
@@ -197,7 +187,6 @@ def render_category(cat_name, elements_dict):
     measures_list = st.session_state.app_data["measures"][cat_name]
     measure_names = [m["name"] for m in measures_list]
 
-    # Massnahmen verwalten Popover
     with st.popover(f"⚙️ Massnahmen verwalten ({cat_name})"):
         st.write("**Neue Massnahme hinzufügen**")
         new_m_name = st.text_input("Name der Massnahme", key=f"nm_{cat_name}")
@@ -256,27 +245,25 @@ def render_category(cat_name, elements_dict):
     measure_names = [m["name"] for m in st.session_state.app_data["measures"][cat_name]]
     calc_data = []
 
-    # LC wird in jeden Widget-Key eingebaut, um Cache-Probleme zu verhindern
     lc = st.session_state.load_counter
 
     for element, area in elements_dict.items():
         if cat_name == "Tragstruktur":
             st.write(f"**{element}**")
         else:
-            st.write(f"**{element}** ({area} m²)")
+            area_str = f"{area:,.2f}".replace(",", "'")
+            st.write(f"**{element}** ({area_str} m²)")
 
         rows = st.session_state.current_selections[cat_name][element]
 
         for i, row_data in enumerate(rows):
             if cat_name == "Tragstruktur":
-                # Alle Tragstruktur Elemente haben das gleiche Layout (Massnahme sichtbar, Fläche, Anzahl)
                 c1, c2, c3, c4 = st.columns([3, 2, 1.5, 1])
                 with c1:
                     selected_idx = measure_names.index(row_data["measure"]) if row_data[
                                                                                    "measure"] in measure_names else 0
                     if len(measure_names) > 0:
-                        # Label "Massnahmen" hinzugefügt (label_visibility nicht mehr collapsed)
-                        row_data["measure"] = st.selectbox("Massnahmen", measure_names, index=selected_idx,
+                        row_data["measure"] = st.selectbox("Massnahme", measure_names, index=selected_idx,
                                                            key=f"sel_{cat_name}_{element}_{i}_{lc}")
                 with c2:
                     row_data["flaeche"] = st.number_input("Fläche (m²)", value=float(row_data.get("flaeche", 100.0)),
@@ -287,28 +274,30 @@ def render_category(cat_name, elements_dict):
                                                          min_value=0.0, step=1.0,
                                                          key=f"anz_{cat_name}_{element}_{i}_{lc}")
                 with c4:
-                    # Abstandhalter, damit das X-Icon genau auf Höhe der Input-Felder bleibt (Label ausgleichen)
                     st.write("")
                     st.write("")
                     if st.button("❌", key=f"del_{cat_name}_{element}_{i}_{lc}"):
                         st.session_state.current_selections[cat_name][element].pop(i)
                         st.rerun()
             else:
-                # Layout für Fassade, Dach, Wände
                 c1, c2, c3 = st.columns([4, 2, 1])
                 with c1:
                     selected_idx = measure_names.index(row_data["measure"]) if row_data[
                                                                                    "measure"] in measure_names else 0
                     if len(measure_names) > 0:
+                        # Label hinzugefügt (label_visibility entfernt)
                         row_data["measure"] = st.selectbox("Massnahme", measure_names, index=selected_idx,
-                                                           key=f"sel_{cat_name}_{element}_{i}_{lc}",
-                                                           label_visibility="collapsed")
+                                                           key=f"sel_{cat_name}_{element}_{i}_{lc}")
                 with c2:
-                    row_data["percent"] = st.number_input("%", value=float(row_data.get("percent", 100.0)),
-                                                          min_value=0.0, max_value=100.0, step=5.0,
-                                                          key=f"perc_{cat_name}_{element}_{i}_{lc}",
-                                                          label_visibility="collapsed")
+                    # Label hinzugefügt (label_visibility entfernt)
+                    row_data["percent"] = st.number_input("Prozentanteil an der Fläche",
+                                                          value=float(row_data.get("percent", 100.0)), min_value=0.0,
+                                                          max_value=100.0, step=5.0,
+                                                          key=f"perc_{cat_name}_{element}_{i}_{lc}")
                 with c3:
+                    # Abstandshalter wie bei der Tragstruktur für das X-Symbol
+                    st.write("")
+                    st.write("")
                     if st.button("❌", key=f"del_{cat_name}_{element}_{i}_{lc}"):
                         st.session_state.current_selections[cat_name][element].pop(i)
                         st.rerun()
@@ -317,7 +306,6 @@ def render_category(cat_name, elements_dict):
                 (m["co2"] for m in st.session_state.app_data["measures"][cat_name] if m["name"] == row_data["measure"]),
                 0)
 
-            # Berechnung Tragstruktur angepasst auf einheitlich Fläche * Anzahl
             if cat_name == "Tragstruktur":
                 total_co2 = co2_val * row_data.get("flaeche", 0) * row_data.get("anzahl", 0)
             else:
@@ -326,11 +314,9 @@ def render_category(cat_name, elements_dict):
             if total_co2 > 0:
                 calc_data.append({"Element": element, "Massnahme": row_data["measure"], "CO2 (kg)": total_co2})
 
-        # Zeile Hinzufügen Button
         if st.button(f"➕ Zeile hinzufügen ({element})", key=f"add_{cat_name}_{element}_{lc}"):
             if len(measure_names) > 0:
                 if cat_name == "Tragstruktur":
-                    # Fläche für alle standardmäßig setzen
                     st.session_state.current_selections[cat_name][element].append(
                         {"measure": measure_names[0], "flaeche": 100.0, "anzahl": 1.0})
                 else:
@@ -340,7 +326,6 @@ def render_category(cat_name, elements_dict):
             else:
                 st.error("Bitte zuerst eine Massnahme über das Zahnrad erstellen.")
 
-    # Energiebedarf mit PV Ausgleich einbinden
     energie_co2_total = 0
     if cat_name == "Fassade":
         st.divider()
@@ -351,7 +336,6 @@ def render_category(cat_name, elements_dict):
                                                                                "pv_ausgleich": 0.0}
 
         edata = st.session_state.current_selections["Fassade"]["Energiebedarf"]
-        # Falls die Variante von einer alten Version geladen wird
         if "pv_ausgleich" not in edata:
             edata["pv_ausgleich"] = 0.0
 
@@ -366,21 +350,29 @@ def render_category(cat_name, elements_dict):
             edata["pv_ausgleich"] = st.number_input("PV-Ausgleich (%)", value=float(edata.get("pv_ausgleich", 0.0)),
                                                     min_value=0.0, max_value=100.0, step=5.0, key=f"energie_pv_{lc}")
 
-        # Berechnung mit PV-Faktor (z.B. 30% Ausgleich -> Faktor 0.7)
         pv_factor = 1.0 - (edata["pv_ausgleich"] / 100.0)
         energie_co2_total = edata["co2_per_a"] * edata["jahre"] * pv_factor
 
     if calc_data:
         df_pie = pd.DataFrame(calc_data)
+        # Werte im Tooltip mit Apostroph formatieren
+        df_pie["CO2_formatiert"] = df_pie["CO2 (kg)"].apply(lambda x: f"{x:,.2f}".replace(",", "'"))
+
         pie_chart = alt.Chart(df_pie).mark_arc().encode(
             theta=alt.Theta(field="CO2 (kg)", type="quantitative"),
             color=alt.Color(field="Element", type="nominal"),
-            tooltip=["Element", "Massnahme", "CO2 (kg)"]
+            tooltip=[
+                alt.Tooltip("Element:N"),
+                alt.Tooltip("Massnahme:N"),
+                alt.Tooltip("CO2_formatiert:N", title="CO2 (kg)")
+            ]
         ).properties(width=300, height=300, title=f"CO2 Anteil - {cat_name}")
         st.altair_chart(pie_chart, use_container_width=True)
 
     if cat_name == "Fassade":
-        st.metric(label="Gesamter Energiebedarf (nach PV-Abzug)", value=f"{energie_co2_total:,.2f} kgCO2")
+        # Metric Output mit Apostroph formatieren
+        energie_co2_str = f"{energie_co2_total:,.2f}".replace(",", "'")
+        st.metric(label="Gesamter Energiebedarf (nach PV-Abzug)", value=f"{energie_co2_str} kgCO2")
 
 
 with col_right:
@@ -426,7 +418,6 @@ if variants_to_compare:
                         co2_val = next((m["co2"] for m in measures_list if m["name"] == row["measure"]), 0)
 
                         if cat_name == "Tragstruktur":
-                            # Tragstruktur nutzt nun komplett einheitlich Fläche * Anzahl
                             total_co2 = co2_val * row.get("flaeche", 0) * row.get("anzahl", 0)
                         else:
                             total_co2 = area * co2_val * (row.get("percent", 0.0) / 100.0)
@@ -442,17 +433,36 @@ if variants_to_compare:
     if comparison_data:
         df_comp = pd.DataFrame(comparison_data)
 
-        bar_chart = alt.Chart(df_comp).mark_bar().encode(
-            x=alt.X('sum(CO2 (kg)):Q', title='Gesamt CO2 (kg)'),
+        # Daten vorher aggregieren für den formatieren Tooltip-String
+        df_agg = df_comp.groupby(['Variante', 'Element'])['CO2 (kg)'].sum().reset_index()
+        df_agg["CO2_formatiert"] = df_agg["CO2 (kg)"].apply(lambda x: f"{x:,.2f}".replace(",", "'"))
+
+        # Horizontales Balkendiagramm, gestapelt nach Element
+        bar_chart = alt.Chart(df_agg).mark_bar().encode(
+            x=alt.X(
+                'CO2 (kg):Q',
+                title='Gesamt CO2 (kg)',
+                # Regex in Vega: Ersetzt die Standard-Kommas der Achse mit einem Apostroph
+                axis=alt.Axis(labelExpr="replace(datum.label, /,/g, \"'\")")
+            ),
             y=alt.Y('Variante:N', title='Varianten'),
             color=alt.Color('Element:N', title='Gebäudeelement'),
-            tooltip=['Variante', 'Element', 'sum(CO2 (kg))']
+            tooltip=[
+                alt.Tooltip('Variante:N'),
+                alt.Tooltip('Element:N'),
+                alt.Tooltip('CO2_formatiert:N', title='CO2 (kg)')
+            ]
         ).properties(height=300)
 
         st.altair_chart(bar_chart, use_container_width=True)
 
         st.write("")
-        csv = df_comp.to_csv(index=False, sep=";").encode('utf-8')
+
+        # CSV Export (Ebenfalls formatiert in der Zieldatei)
+        df_export = df_agg[['Variante', 'Element', 'CO2 (kg)']].copy()
+        df_export['CO2 (kg)'] = df_export['CO2 (kg)'].apply(lambda x: f"{x:,.2f}".replace(",", "'"))
+
+        csv = df_export.to_csv(index=False, sep=";").encode('utf-8')
         st.download_button(
             label="📥 Daten als CSV exportieren",
             data=csv,
