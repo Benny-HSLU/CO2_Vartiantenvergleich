@@ -4,6 +4,99 @@ import altair as alt
 import json
 import os
 
+# --- Layout & Design Setup ---
+st.set_page_config(page_title="CO2 Variantenvergleich", layout="wide")
+
+# Custom CSS für "Dunkles Grünes Glas-Thema"
+custom_css = """
+<style>
+/* Dunkelgrüner Farbverlauf als Hintergrund (unten sehr dunkel, oben etwas heller) */
+.stApp {
+    background: linear-gradient(to top, #021105, #11381c) !important;
+    background-attachment: fixed;
+}
+
+/* Transparenter Header */
+header[data-testid="stHeader"] {
+    background-color: transparent !important;
+}
+
+/* Haupt-Container als dunkles Milchglas-Panel (Glassmorphismus) */
+.main .block-container {
+    background: rgba(0, 0, 0, 0.25) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border-radius: 20px !important;
+    padding: 2rem 3rem !important;
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.5) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    margin-top: 2rem !important;
+    margin-bottom: 2rem !important;
+}
+
+/* Styling für alle Streamlit Buttons (Mac Glas-Stil) */
+div[data-testid="stButton"] button, div[data-testid="stDownloadButton"] button {
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 12px !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+}
+
+/* Button Hover Effekt */
+div[data-testid="stButton"] button:hover, div[data-testid="stDownloadButton"] button:hover {
+    background: rgba(255, 255, 255, 0.25) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3) !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Popover / Selectboxen / Inputs - Glas-Stil */
+input, div[data-baseweb="select"] > div, div[data-baseweb="popover"] > div, div[data-testid="stPopoverBody"] {
+    background: rgba(0, 0, 0, 0.4) !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    backdrop-filter: blur(10px) !important;
+    color: #ffffff !important;
+}
+
+/* Anpassung der Dropdown-Listen (damit weißer Text lesbar ist) */
+ul[data-baseweb="menu"] {
+    background-color: #0b2612 !important; 
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+li[data-baseweb="menu-item"] {
+    color: #ffffff !important;
+}
+
+/* Tabs im Mac-Design */
+button[data-baseweb="tab"] {
+    background-color: transparent !important;
+    border-radius: 10px 10px 0 0 !important;
+    color: #aaaaaa !important;
+}
+button[data-baseweb="tab"][aria-selected="true"] {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-bottom: 3px solid #2ecc71 !important;
+    color: #ffffff !important;
+}
+
+/* Allgemeine Text-Farben anpassen für dunklen Hintergrund */
+.stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp p, .stApp label, .stApp span, div[data-testid="stMetricValue"] {
+    color: #ffffff !important;
+}
+
+/* Vega Tooltip Fix (damit Grafiken beim Hovern keinen weißen Text auf weißem Grund haben) */
+#vg-tooltip-element * {
+    color: #000000 !important;
+}
+</style>
+"""
+st.markdown(custom_css, unsafe_allow_html=True)
+
 # --- Konfiguration & Konstanten ---
 DATA_FILE = "co2_data.json"
 
@@ -73,9 +166,7 @@ def update_walls_structure():
 
 update_walls_structure()
 
-# --- Layout der App ---
-st.set_page_config(page_title="CO2 Variantenvergleich", layout="wide")
-
+# --- APP START ---
 col_header, col_gear = st.columns([5, 1])
 with col_header:
     st.title("CO2 Variantenvergleich")
@@ -263,7 +354,7 @@ def render_category(cat_name, elements_dict):
                     selected_idx = measure_names.index(row_data["measure"]) if row_data[
                                                                                    "measure"] in measure_names else 0
                     if len(measure_names) > 0:
-                        row_data["measure"] = st.selectbox("Massnahme", measure_names, index=selected_idx,
+                        row_data["measure"] = st.selectbox("Massnahmen", measure_names, index=selected_idx,
                                                            key=f"sel_{cat_name}_{element}_{i}_{lc}")
                 with c2:
                     row_data["flaeche"] = st.number_input("Fläche (m²)", value=float(row_data.get("flaeche", 100.0)),
@@ -285,17 +376,14 @@ def render_category(cat_name, elements_dict):
                     selected_idx = measure_names.index(row_data["measure"]) if row_data[
                                                                                    "measure"] in measure_names else 0
                     if len(measure_names) > 0:
-                        # Label hinzugefügt (label_visibility entfernt)
                         row_data["measure"] = st.selectbox("Massnahme", measure_names, index=selected_idx,
                                                            key=f"sel_{cat_name}_{element}_{i}_{lc}")
                 with c2:
-                    # Label hinzugefügt (label_visibility entfernt)
                     row_data["percent"] = st.number_input("Prozentanteil an der Fläche",
                                                           value=float(row_data.get("percent", 100.0)), min_value=0.0,
                                                           max_value=100.0, step=5.0,
                                                           key=f"perc_{cat_name}_{element}_{i}_{lc}")
                 with c3:
-                    # Abstandshalter wie bei der Tragstruktur für das X-Symbol
                     st.write("")
                     st.write("")
                     if st.button("❌", key=f"del_{cat_name}_{element}_{i}_{lc}"):
@@ -355,9 +443,9 @@ def render_category(cat_name, elements_dict):
 
     if calc_data:
         df_pie = pd.DataFrame(calc_data)
-        # Werte im Tooltip mit Apostroph formatieren
         df_pie["CO2_formatiert"] = df_pie["CO2 (kg)"].apply(lambda x: f"{x:,.2f}".replace(",", "'"))
 
+        # Standard-Farbpalette von Altair wiederhergestellt
         pie_chart = alt.Chart(df_pie).mark_arc().encode(
             theta=alt.Theta(field="CO2 (kg)", type="quantitative"),
             color=alt.Color(field="Element", type="nominal"),
@@ -370,7 +458,6 @@ def render_category(cat_name, elements_dict):
         st.altair_chart(pie_chart, use_container_width=True)
 
     if cat_name == "Fassade":
-        # Metric Output mit Apostroph formatieren
         energie_co2_str = f"{energie_co2_total:,.2f}".replace(",", "'")
         st.metric(label="Gesamter Energiebedarf (nach PV-Abzug)", value=f"{energie_co2_str} kgCO2")
 
@@ -433,16 +520,14 @@ if variants_to_compare:
     if comparison_data:
         df_comp = pd.DataFrame(comparison_data)
 
-        # Daten vorher aggregieren für den formatieren Tooltip-String
         df_agg = df_comp.groupby(['Variante', 'Element'])['CO2 (kg)'].sum().reset_index()
         df_agg["CO2_formatiert"] = df_agg["CO2 (kg)"].apply(lambda x: f"{x:,.2f}".replace(",", "'"))
 
-        # Horizontales Balkendiagramm, gestapelt nach Element
+        # Standard-Farbpalette von Altair wiederhergestellt
         bar_chart = alt.Chart(df_agg).mark_bar().encode(
             x=alt.X(
                 'CO2 (kg):Q',
                 title='Gesamt CO2 (kg)',
-                # Regex in Vega: Ersetzt die Standard-Kommas der Achse mit einem Apostroph
                 axis=alt.Axis(labelExpr="replace(datum.label, /,/g, \"'\")")
             ),
             y=alt.Y('Variante:N', title='Varianten'),
@@ -458,7 +543,6 @@ if variants_to_compare:
 
         st.write("")
 
-        # CSV Export (Ebenfalls formatiert in der Zieldatei)
         df_export = df_agg[['Variante', 'Element', 'CO2 (kg)']].copy()
         df_export['CO2 (kg)'] = df_export['CO2 (kg)'].apply(lambda x: f"{x:,.2f}".replace(",", "'"))
 
