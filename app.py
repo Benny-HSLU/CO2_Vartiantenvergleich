@@ -85,7 +85,12 @@ button[data-baseweb="tab"][aria-selected="true"] {
 }
 
 /* Allgemeine Text-Farben anpassen für dunklen Hintergrund */
-.stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp p, .stApp label, .stApp span, div[data-testid="stMetricValue"] {
+.stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp p, .stApp label, .stApp span, div[data-testid="stMetricValue"], .stMarkdown li {
+    color: #ffffff !important;
+}
+
+/* Tooltip für Dokumentation Lesbarkeit (Hintergrund abdunkeln) */
+div[data-testid="stPopoverBody"] p, div[data-testid="stPopoverBody"] li, div[data-testid="stPopoverBody"] h1, div[data-testid="stPopoverBody"] h2 {
     color: #ffffff !important;
 }
 
@@ -99,6 +104,7 @@ st.markdown(custom_css, unsafe_allow_html=True)
 
 # --- Konfiguration & Konstanten ---
 DATA_FILE = "co2_data.json"
+DOC_FILE = "anleitung.txt"  # Dokumentations-Datei
 
 DEFAULT_DATA = {
     "config": {
@@ -167,11 +173,24 @@ def update_walls_structure():
 update_walls_structure()
 
 # --- APP START ---
-col_header, col_gear = st.columns([5, 1])
+# Header Aufteilung mit Anleitung Oben Links
+col_doc, col_header, col_gear = st.columns([1.5, 4, 1.5])
+
+with col_doc:
+    st.write("")  # Kleiner Spacer für vertikale Zentrierung
+    with st.popover("📖 Anleitung"):
+        if os.path.exists(DOC_FILE):
+            with open(DOC_FILE, "r", encoding="utf-8") as f:
+                st.markdown(f.read())
+        else:
+            st.warning("Die Datei 'anleitung.txt' wurde im Verzeichnis nicht gefunden.")
+
 with col_header:
-    st.title("CO2 Variantenvergleich")
+    st.title("CO2 Variantenvergleich 🍃")
+
 with col_gear:
-    with st.popover("⚙️ Gebäude-Konfiguration"):
+    st.write("")  # Kleiner Spacer für vertikale Zentrierung
+    with st.popover("⚙️ Gebäude-Konfig."):
         st.subheader("Gebäudedaten")
         c = st.session_state.app_data["config"]
         c["length"] = st.number_input("Länge (m)", value=float(c["length"]), step=1.0)
@@ -445,7 +464,6 @@ def render_category(cat_name, elements_dict):
         df_pie = pd.DataFrame(calc_data)
         df_pie["CO2_formatiert"] = df_pie["CO2 (kg)"].apply(lambda x: f"{x:,.2f}".replace(",", "'"))
 
-        # Standard-Farbpalette von Altair wiederhergestellt
         pie_chart = alt.Chart(df_pie).mark_arc().encode(
             theta=alt.Theta(field="CO2 (kg)", type="quantitative"),
             color=alt.Color(field="Element", type="nominal"),
@@ -523,7 +541,6 @@ if variants_to_compare:
         df_agg = df_comp.groupby(['Variante', 'Element'])['CO2 (kg)'].sum().reset_index()
         df_agg["CO2_formatiert"] = df_agg["CO2 (kg)"].apply(lambda x: f"{x:,.2f}".replace(",", "'"))
 
-        # Standard-Farbpalette von Altair wiederhergestellt
         bar_chart = alt.Chart(df_agg).mark_bar().encode(
             x=alt.X(
                 'CO2 (kg):Q',

@@ -1,0 +1,63 @@
+# 📖 Dokumentation & Anleitung: CO2 Variantenvergleich
+
+Herzlich willkommen zum CO2 Variantenvergleich! Mit diesem Tool können Sie unkompliziert den CO2-Fußabdruck verschiedener baulicher Massnahmen berechnen, Varianten abspeichern und diese grafisch miteinander vergleichen.
+
+---
+
+## 1. Die Gebäude-Konfiguration (Oben rechts)
+Bevor Sie mit der Zuweisung von Materialien beginnen, sollten Sie die Grunddaten Ihres Gebäudes festlegen.
+*   **Wo?** Klicken Sie oben rechts auf **"⚙️ Gebäude-Konfiguration"**.
+*   **Was tun?** Tragen Sie die Längen, Breiten und Höhen Ihres Gebäudes ein.
+*   **Wandflächen pro Geschoss:** In der Tabelle können Sie Geschosse hinzufügen oder löschen und die jeweiligen Wandflächen definieren.
+*   **Wichtig:** Klicken Sie abschliessend auf **"Gebäudedaten speichern"**.
+
+> **Beispiel:** Sie planen ein 3-stöckiges Gebäude. Geben Sie bei "Anzahl Geschosse" eine 3 ein. In der Tabelle darunter fügen Sie eine Zeile für "OG2" mit der entsprechenden Grundrissfläche hinzu.
+
+---
+
+## 2. Massnahmen verwalten (Zahnräder bei den Kategorien)
+Jede Kategorie (Fassade, Dach, Wände, Tragstruktur) hat ihre eigenen Massnahmen (z.B. verschiedene Baustoffe).
+*   **Wo?** Klicken Sie auf das Zahnrad **"⚙️ Massnahmen verwalten"** oberhalb der jeweiligen Eingabefelder.
+*   **Hinzufügen:** Geben Sie einen Namen (z.B. "Holzfassade") und den entsprechenden CO2-Wert pro Quadratmeter (z.B. 8.5) ein und klicken Sie auf Hinzufügen.
+*   **Bearbeiten/Löschen:** Im selben Menü können Sie Schreibfehler korrigieren, Werte anpassen oder veraltete Massnahmen löschen. Wenn Sie einen Namen ändern, wird dieser in allen gespeicherten Varianten automatisch aktualisiert!
+
+> **Beispiel:** Sie wollen Ziegel mit Blech auf dem Dach vergleichen. Fügen Sie unter Dach zwei neue Massnahmen hinzu: "Ziegel" (CO2: 25) und "Blech" (CO2: 35). 
+
+---
+
+## 3. Zuweisung der Massnahmen
+Sie können den einzelnen Elementen des Gebäudes nun Ihre erstellten Massnahmen zuweisen. Klicken Sie dafür auf **"➕ Zeile hinzufügen"** unter dem gewünschten Element (z.B. Nordfassade).
+
+**A. Kategorien Fassade, Dach & Wände (Prozentuale Aufteilung)**
+Hier verteilen Sie die Massnahmen prozentual auf die berechnete Gesamtfläche.
+*   **Beispiel:** Die Südfassade besteht zu 80% aus "Standard Putz" und zu 20% aus "Holz". Fügen Sie zwei Zeilen hinzu und stellen Sie die Prozente entsprechend ein.
+
+**B. Kategorie Tragstruktur (Absolute Mengen)**
+Hier arbeiten Sie mit konkreten Stückzahlen und Flächen.
+*   **Stützen & Wände:** Wählen Sie die Massnahme und geben Sie die *Anzahl* ein (die Höhe wird aus den Gebäudedaten genommen).
+*   **Decken:** Geben Sie die *Fläche (m²)* pro Decke und die *Anzahl* der Decken ein.
+
+---
+
+## 4. Energiebedarf & PV-Ausgleich (Nur unter "Fassade")
+Zusätzlich zu den Baustoffen können Sie den laufenden CO2-Ausstoß durch den Energiebedarf berücksichtigen.
+*   **kgCO2/a:** Der jährliche Ausstoß (z.B. 1'500).
+*   **Anzahl Jahre:** Der Betrachtungszeitraum (z.B. 50 Jahre).
+*   **PV-Ausgleich (%):** Wenn Sie eine Photovoltaikanlage planen, können Sie hier den prozentualen Ausgleich eintragen. 
+*   **Beispiel:** Bei 1'000 kgCO2/a auf 50 Jahre und 30% PV-Ausgleich rechnet das Tool: `1000 * 50 * 0.7 = 35'000 kgCO2`.
+
+---
+
+## 5. Varianten speichern und laden (Linke Spalte)
+Das Herzstück des Tools. Jede Konfiguration auf der rechten Seite können Sie als eigene Variante links abspeichern.
+*   **Neue Variante:** Tragen Sie unten links einen Namen ein (z.B. "Variante 1: Massivbau") und klicken Sie auf **"Speichern unter"**.
+*   **Variante wechseln:** Wählen Sie im Dropdown-Menü ganz oben eine bestehende Variante und klicken Sie auf **"Variante laden"**.
+*   **Variante aktualisieren:** Wenn Sie eine geladene Variante verändern, klicken Sie auf **"Speichern (Aktualisieren)"**, um die Änderungen zu übernehmen.
+
+---
+
+## 6. Variantenvergleich & Export (Ganz unten)
+Wenn Sie mehrere Varianten gespeichert haben, scrollen Sie ganz nach unten.
+*   Wählen Sie im Dropdown-Menü zwei oder mehr Varianten aus.
+*   Es erscheint automatisch ein **Balkendiagramm**, das die Gesamt-CO2-Werte gegenüberstellt und farblich nach den Gebäudeelementen aufschlüsselt.
+*   Mit dem Button **"📥 Daten als CSV exportieren"** können Sie die genauen Zahlen des Diagramms für Excel herunterladen. Die Schweizer Zahlenformatierung (z.B. 10'000.50) wird dabei beibehalten.
